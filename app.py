@@ -1,51 +1,38 @@
-# Import necesaary libraries.
+# Import necessary libraries.
+from sentiment.data_loader import load_data
+from sentiment.model import prepare_datasets, train_classifier, evaluate_classifier
+from sentiment.analyzer import analyze_sentiment
 import nltk
-from nltk.corpus import movie_reviews
-from nltk.classify import NaiveBayesClassifier
-from nltk.classify.util import accuracy as nltk_accuracy
-from nltk.corpus import stopwords
-import random
 
-# Download the NLTK data files.
 nltk.download('movie_reviews')
-nltk.download('punk')
+nltk.download('punkt')       # Sentence tokenizer
+nltk.download('punkt_tab')   # 🔥 NEW dependency
 nltk.download('stopwords')
 
-# Preprocess the dataset and extract features.
-def extract_features(words):
-    return {word: True for word in words}
+def main():
+    # Load dataset
+    docs = load_data()
 
-# Load and pre process the data set from NLTK
-docs = [(list(movie_reviews.words(fileid)), category)
-        for category in movie_reviews.categories()
-        for fileid in movie_reviews.fileids(category)]
+    # Prepare datasets
+    train_set, test_set = prepare_datasets(docs)
 
-# Shuffle the dataset to ensure random distribution
-random.shuffle(docs)
+    # Train classifier
+    classifier = train_classifier(train_set)
 
-# Prepare the data set for training and testing.
-features = [(extract_features(d), c) for (d, c) in docs]
-train_set, test_set = features[:1600], features[1600:]
+    # Evaluate
+    accuracy = evaluate_classifier(classifier, test_set)
+    print(f"Accuracy: {accuracy * 100:.2f}%")
 
-# Train the NAvieBayesClassifier.
-classifier = NaiveBayesClassifier.train(train_set)
+    # Show informative features
+    classifier.show_most_informative_features(10)
 
-# Evaluate the Classifier.
-accuracy = nltk_accuracy(classifier, test_set)
-print(f"Accuracy: {accuracy * 100:.2f}%")
+    # Test with custom input
+    while True:
+        text = input("\nEnter a sentence (or 'quit' to stop): ")
+        if text.lower() == "quit":
+            break
+        sentiment = analyze_sentiment(text, classifier)
+        print(f"Sentiment: {sentiment}")
 
-# Show the most Imfomative features.
-classifier.show_most_informative_features(10)
-
-# Test on new Input Sentances.
-def analyze_sentiment(text):
-    # Tokenize and remove stopwords
-    words = nltk.word_tokenize(text)
-    words = [word for word in words if word.lower() not in stopwords.words('english')]
-
-    # Predict sentiment
-    features = extract_features(words)
-    return classifier.classify(features)
-
-
-
+if __name__ == "__main__":
+    main()
